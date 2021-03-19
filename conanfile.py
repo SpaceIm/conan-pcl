@@ -19,6 +19,8 @@ class PclConan(ConanFile):
         "shared": [True, False],
         "fPIC": [True, False],
         "with_openmp": [True, False],
+        "with_png": [True, False],
+        "with_qhull": [True, False],
         "with_cuda": [True, False],
         "with_tools": [True, False]
     }
@@ -26,6 +28,8 @@ class PclConan(ConanFile):
         "shared": False,
         "fPIC": True,
         "with_openmp": True,
+        "with_png": True,
+        "with_qhull": True,
         "with_cuda": False,
         "with_tools": False,
     }
@@ -82,17 +86,20 @@ class PclConan(ConanFile):
         self._check_msvc()
         self._check_cxx_standard()
         self._check_libcxx_compatibility()
-        self.options["qhull"].reentrant = False
+        if self.options.with_qhull:
+            self.options["qhull"].reentrant = False
 
     def requirements(self):
         self.requires("boost/1.75.0")
         self.requires("eigen/3.3.9")
         self.requires("flann/1.9.1")
-        self.requires("libpng/1.6.37")
-        self.requires("qhull/8.0.1")
+        if self.options.with_png:
+            self.requires("libpng/1.6.37")
+        if self.options.with_qhull:
+            self.requires("qhull/8.0.1")
 
     def validate(self):
-        if self.options["qhull"].reentrant:
+        if self.options.with_qhull and self.options["qhull"].reentrant:
             raise ConanInvalidConfiguration("pcl requires non-reentrant qhull, you must set qhull:reentrant=False")
 
     def source(self):
@@ -136,8 +143,8 @@ class PclConan(ConanFile):
             "BUILD_tools": self.options.with_tools,
             "WITH_OPENMP": self.options.with_openmp,
             "WITH_LIBUSB": False,
-            "WITH_PNG": True,
-            "WITH_QHULL": True,
+            "WITH_PNG": self.options.with_png,
+            "WITH_QHULL": self.options.with_qhull,
             "WITH_CUDA": self.options.with_cuda,
             "WITH_VTK": False,
             "WITH_PCAP": False,
@@ -150,8 +157,9 @@ class PclConan(ConanFile):
             "WITH_RSSDK": False,
             "PCL_SHARED_LIBS": self.options.shared,
             "FLANN_USE_STATIC": not self.options["flann"].shared,
-            "QHULL_USE_STATIC": not self.options["qhull"].shared
         }
+        if self.options.with_qhull:
+            pcl_config.update({"QHULL_USE_STATIC": not self.options["qhull"].shared})
         pcl_features = {
             "BUILD_kdtree": True,
             "BUILD_octree": True,
@@ -228,6 +236,12 @@ class PclConan(ConanFile):
 
     @property
     def _pcl_components(self):
+        def png():
+            return ["libpng::libpng"] if self.options.with_png else []
+
+        def qhull():
+            return ["qhull::qhull"] if self.options.with_qhull else []
+
         return {
             "common": {"requires": ["eigen::eigen", "boost::boost"]},
             "kdtree": {"requires": ["common", "flann::flann"]},
@@ -237,11 +251,11 @@ class PclConan(ConanFile):
             "filters": {"requires": ["common", "sample_consensus", "search", "kdtree", "octree"]},
             "2d": {"requires": ["common", "filters"], "header_only": True},
             "geometry": {"requires": ["common"], "header_only": True},
-            "io": {"requires": ["common", "octree", "libpng::libpng"], "extra_libs": ["io_ply"]},
+            "io": {"requires": ["common", "octree"] + png(), "extra_libs": ["io_ply"]},
             "features": {"requires": ["common", "search", "kdtree", "octree", "filters", "2d"]},
             "ml": {"requires": ["common"]},
             "segmentation": {"requires": ["common", "geometry", "search", "sample_consensus", "kdtree", "octree", "features", "filters", "ml"]},
-            "surface": {"requires": ["common", "search", "kdtree", "octree", "qhull::qhull"]},
+            "surface": {"requires": ["common", "search", "kdtree", "octree"] + qhull()},
             "registration": {"requires": ["common", "octree", "kdtree", "search", "sample_consensus", "features", "filters"]},
             "keypoints": {"requires": ["common", "search", "kdtree", "octree", "features", "filters"]},
             "tracking": {"requires": ["common", "search", "kdtree", "filters", "octree"]},
