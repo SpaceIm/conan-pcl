@@ -27,7 +27,7 @@ class PclConan(ConanFile):
     default_options = {
         "shared": False,
         "fPIC": True,
-        "with_openmp": True,
+        "with_openmp": False,
         "with_png": True,
         "with_qhull": True,
         "with_cuda": False,
