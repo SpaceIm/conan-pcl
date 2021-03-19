@@ -18,12 +18,14 @@ class PclConan(ConanFile):
     options = {
         "shared": [True, False],
         "fPIC": [True, False],
+        "with_openmp": [True, False],
         "with_cuda": [True, False],
         "with_tools": [True, False]
     }
     default_options = {
         "shared": False,
         "fPIC": True,
+        "with_openmp": True,
         "with_cuda": False,
         "with_tools": False,
     }
@@ -132,6 +134,7 @@ class PclConan(ConanFile):
 
         pcl_config = {
             "BUILD_tools": self.options.with_tools,
+            "WITH_OPENMP": self.options.with_openmp,
             "WITH_LIBUSB": False,
             "WITH_PNG": True,
             "WITH_QHULL": True,
@@ -285,6 +288,12 @@ class PclConan(ConanFile):
                 self.cpp_info.components[alias_component].bindirs = []
 
         _update_components(self._pcl_components)
+        if self.settings.os in ["Linux", "FreeBSD"]:
+            self.cpp_info.components["common"].system_libs.append("pthread")
+        if self.options.with_openmp and not self.options.shared:
+            if self.settings.compiler == "gcc":
+                self.cpp_info.components["common"].sharedlinkflags.append("-fopenmp")
+                self.cpp_info.components["common"].exelinkflags.append("-fopenmp")
 
         if self.options.with_tools:
             bin_path = os.path.join(self.package_folder, "bin")
