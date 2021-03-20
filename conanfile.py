@@ -46,9 +46,10 @@ class PclConan(ConanFile):
         if self.settings.os == "Windows":
             del self.options.fPIC
 
-    def _check_msvc_toolset(self):
-        if tools.msvs_toolset(self) == "v140":
-            raise ConanInvalidConfiguration("Unsupported Visual Studio Compiler Toolset")
+    def _check_msvc(self):
+        if (tools.msvs_toolset(self) == "v140" or
+                self.settings.compiler == "Visual Studio" and tools.Version(self.settings.compiler.version) < "15"):
+            raise ConanInvalidConfiguration("Unsupported Visual Studio Compiler or Toolset")
 
     def _check_cxx_standard(self):
         minimal_cpp_standard = "14"
@@ -71,11 +72,20 @@ class PclConan(ConanFile):
         if version < minimal_version[compiler]:
             raise ConanInvalidConfiguration("%s requires a compiler that supports at least C++%s" % (self.name, minimal_cpp_standard))
 
+    def _check_libcxx_compatibility(self):
+        if self.settings.compiler == "clang" and self.settings.compiler.libcxx == "libc++":
+            version = tools.Version(self.settings.compiler.version)
+            minimum_version = 6
+            if version < minimum_version:
+                raise ConanInvalidConfiguration("Clang with libc++ is version %s but must be at least version %s" %
+                        (version, minimum_version))
+
     def configure(self):
         if self.options.shared:
             del self.options.fPIC
-        self._check_msvc_toolset()
+        self._check_msvc()
         self._check_cxx_standard()
+        self._check_libcxx_compatibility()
         if self.options.with_qhull:
             self.options["qhull"].reentrant = False
 
