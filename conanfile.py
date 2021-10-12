@@ -46,6 +46,23 @@ class PclConan(ConanFile):
         if self.settings.os == "Windows":
             del self.options.fPIC
 
+    def configure(self):
+        if self.options.shared:
+            del self.options.fPIC
+        if self.options.with_qhull:
+            # TODO: pcl might switch to reentrant qhull in the next release:
+            #       don't forget to check https://github.com/PointCloudLibrary/pcl/pull/4540 when you bump pcl version
+            self.options["qhull"].reentrant = False
+
+    def requirements(self):
+        self.requires("boost/1.75.0")
+        self.requires("eigen/3.3.9")
+        self.requires("flann/1.9.1")
+        if self.options.with_png:
+            self.requires("libpng/1.6.37")
+        if self.options.with_qhull:
+            self.requires("qhull/8.0.1")
+
     def _check_msvc(self):
         if (tools.msvs_toolset(self) == "v140" or
                 self.settings.compiler == "Visual Studio" and tools.Version(self.settings.compiler.version) < "15"):
@@ -80,27 +97,10 @@ class PclConan(ConanFile):
                 raise ConanInvalidConfiguration("Clang with libc++ is version %s but must be at least version %s" %
                         (version, minimum_version))
 
-    def configure(self):
-        if self.options.shared:
-            del self.options.fPIC
+    def validate(self):
         self._check_msvc()
         self._check_cxx_standard()
         self._check_libcxx_compatibility()
-        if self.options.with_qhull:
-            # TODO: pcl might switch to reentrant qhull in the next release:
-            #       don't forget to check https://github.com/PointCloudLibrary/pcl/pull/4540 when you bump pcl version
-            self.options["qhull"].reentrant = False
-
-    def requirements(self):
-        self.requires("boost/1.75.0")
-        self.requires("eigen/3.3.9")
-        self.requires("flann/1.9.1")
-        if self.options.with_png:
-            self.requires("libpng/1.6.37")
-        if self.options.with_qhull:
-            self.requires("qhull/8.0.1")
-
-    def validate(self):
         if self.options.with_qhull and self.options["qhull"].reentrant:
             raise ConanInvalidConfiguration("pcl requires non-reentrant qhull, you must set qhull:reentrant=False")
 
