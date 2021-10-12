@@ -105,8 +105,8 @@ class PclConan(ConanFile):
             raise ConanInvalidConfiguration("pcl requires non-reentrant qhull, you must set qhull:reentrant=False")
 
     def source(self):
-        tools.get(**self.conan_data["sources"][self.version])
-        os.rename("pcl-pcl-{}".format(self.version), self._source_subfolder)
+        tools.get(**self.conan_data["sources"][self.version],
+                  destination=self._source_subfolder, strip_root=True)
 
     def _patch_sources(self):
         cmake_lists = os.path.join(self._source_subfolder, "CMakeLists.txt")
