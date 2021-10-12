@@ -55,8 +55,8 @@ class PclConan(ConanFile):
             self.options["qhull"].reentrant = False
 
     def requirements(self):
-        self.requires("boost/1.75.0")
-        self.requires("eigen/3.3.9")
+        self.requires("boost/1.77.0")
+        self.requires("eigen/3.4.0")
         self.requires("flann/1.9.1")
         if self.options.with_png:
             self.requires("libpng/1.6.37")
